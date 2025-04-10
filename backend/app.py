@@ -154,8 +154,8 @@ class Users(Resource):
     
     def post(self):
         data= request.get_json()
-        if not data:
-            return {'error':'No data provided'},400
+        if not data or 'username' not in data:
+            return {'error':'Username is required'},400
         new_user= User(username= data.get('username'))
         db.session.add(new_user)
         db.session.commit()
@@ -166,6 +166,39 @@ class Users(Resource):
         }),201)
         return response
 api.add_resource(Users,'/users')
+
+class UserByID(Resource):
+    def get(self,id):
+        user= User.query.filter_by(id=id).first()
+        if not user:
+            return {'error':'User not found'},404
+        response= make_response(jsonify(user.to_dict()),200)
+        return response
+    
+    def patch(self,id):
+        user = User.query.filter_by(id=id).first()
+        if not user:
+            return {'error':'User not found'},404
+        data= request.get_json()
+        if not data:
+            return {'error':'No data provided'},400
+        for key,value in data.items():
+            if hasattr(user,key):
+                setattr(user,key,value)
+        db.session.commit()
+        response= make_response(jsonify(user.to_dict()),200)    
+        return response
+    
+    def delete(self,id):
+        user= User.query.filter(User.id==id).first()
+        if not user:
+            return {'error':'User not found'},404
+        db.session.delete(user)
+        db.session.commit()
+
+        return {'message':'User deleted successfully'},200
+
+api.add_resource(UserByID,'/users/<int:id>')
         
 if __name__=='__main__':
     app.run(port=5555, debug=True)
